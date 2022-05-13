@@ -1,7 +1,7 @@
 <?php
 
 
-namespace ACAT\SLim\Middleware;
+namespace ACAT\Slim\Middleware;
 
 use ACAT\JWT\AcatToken;
 use ACAT\JWT\Exception\TokenException;
