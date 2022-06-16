@@ -122,7 +122,13 @@ abstract class Action {
 	 * @return Response
 	 */
     protected function respondWithError($message = null, int $statusCode = 500) : Response {
+
+        if (empty($statusCode)) {
+            $statusCode = 500;
+        }
+
     	return $this->respond(new ActionPayload($statusCode, $message));
+
 	}
 
 	/**
