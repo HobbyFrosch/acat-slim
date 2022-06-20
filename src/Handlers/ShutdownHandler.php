@@ -2,6 +2,7 @@
 
 namespace ACAT\Slim\Handlers;
 
+use ACAT\Slim\ResponseEmitter\ResponseEmitter;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Exception\HttpInternalServerErrorException;
 
