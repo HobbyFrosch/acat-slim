@@ -74,7 +74,7 @@ final class Authorize implements MiddlewareInterface {
         }
         catch (AuthorizeException | TokenException | IntegrityViolationException $e) {
 
-            $this->logger->critical($e);
+            $this->logger->critical($e->getMessage());
 
             return (new ResponseFactory())->createResponse(401)
                                           ->withHeader('X-Smurf', 'Schluuuuuuuumpf');
