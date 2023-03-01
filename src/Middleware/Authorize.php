@@ -72,13 +72,10 @@ final class Authorize implements MiddlewareInterface {
         try {
             $this->validateRequest($request);
         }
-        catch (AuthorizeException | TokenException | IntegrityViolationException $e) {
+        catch (AuthorizeException | TokenException $e) {
 
             $this->logger->critical($e->getMessage());
-
-            return (new ResponseFactory())->createResponse(401)
-                                          ->withHeader('X-Smurf', 'Schluuuuuuuumpf');
-
+            return (new ResponseFactory())->createResponse(401);
         }
 
         return $handler->handle($request);
@@ -90,7 +87,7 @@ final class Authorize implements MiddlewareInterface {
      * @throws AuthorizeException
      * @throws TokenException
      */
-    private function validateRequest(ServerRequestInterface $request) : void {
+    public function validateRequest(ServerRequestInterface $request) : void {
 
         if (!array_key_exists($this->header, $request->getHeaders()) || !$request->getHeader($this->header)) {
             throw new AuthorizeException('authorization failed');
