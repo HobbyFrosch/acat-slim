@@ -1,0 +1,13 @@
+.idea/
+.git/
+.phpunit.result.cache
+logs/
+storage/
+mysql/
+vendor/
+cache/
+composer.lock
+/php_error_log
+.DS_Store
+/data/
+/.phpunit.cache/
