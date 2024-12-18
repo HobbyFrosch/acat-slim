@@ -40,7 +40,7 @@ final class CORS implements MiddlewareInterface
     {
         return $response
             ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
+            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE, PATCH')
             ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     }
 

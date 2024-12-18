@@ -36,7 +36,8 @@ abstract class AbstractAction extends Action
     {
         try {
             return $this->process();
-        } catch (Exception $e) {
+        }
+        catch (Exception $e) {
             $this->logger->critical($e);
             if ( ! $e->getCode()) {
                 $code = 500;
