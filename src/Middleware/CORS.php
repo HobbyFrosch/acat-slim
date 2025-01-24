@@ -15,6 +15,11 @@ use Psr\Http\Server\RequestHandlerInterface;
 final class CORS implements MiddlewareInterface {
 
 	/**
+	 * @var bool
+	 */
+	private bool $strict;
+
+	/**
 	 * @var array
 	 */
 	private array $allowedOrigins;
@@ -33,8 +38,9 @@ final class CORS implements MiddlewareInterface {
 	 * @param   LoggerInterface  $logger
 	 * @param   array            $allowedOrigins
 	 * @param   ResponseFactory  $responseFactory
+	 * @param   bool             $strict
 	 */
-	public function __construct(LoggerInterface $logger, array $allowedOrigins, ResponseFactory $responseFactory) {
+	public function __construct(LoggerInterface $logger, array $allowedOrigins, ResponseFactory $responseFactory, bool $strict = true) {
 		$this->logger = $logger;
 		$this->allowedOrigins = $allowedOrigins;
 		$this->responseFactory = $responseFactory;
@@ -51,8 +57,13 @@ final class CORS implements MiddlewareInterface {
 		$origin = $request->getHeaderLine('Origin');
 
 		if ( ! $origin || ! in_array($origin, $this->allowedOrigins)) {
-			$this->logger->warning('origin ' . ($origin ?: 'unknown') . ' not set or allowed');
-			return $this->responseFactory->createResponse(403);
+			if ($this->strict) {
+				$this->logger->warning('origin '.($origin ?: 'unknown').' not set or allowed');
+				return $this->responseFactory->createResponse(403);
+			}
+			else {
+				$origin = '*';
+			}
 		}
 
 		if ($request->getMethod() === 'OPTIONS') {
@@ -71,9 +82,13 @@ final class CORS implements MiddlewareInterface {
 	 * @return ResponseInterface
 	 */
 	private function createCORSHeader(ResponseInterface $response, string $origin) : ResponseInterface {
+
+		if ($origin !== '*') {
+			$response = $response->withHeader('Access-Control-Allow-Credentials', 'true');
+		}
+
 		return $response
 			->withHeader('Access-Control-Allow-Origin', $origin)
-			->withHeader('Access-Control-Allow-Credentials', 'true')
 			->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE, PATCH')
 			->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     }
