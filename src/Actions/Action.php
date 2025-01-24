@@ -151,8 +151,7 @@ abstract class Action {
 
         return $this->response
                     ->withHeader('Content-Type', 'application/json')
-                    ->withHeader('X-Smurf', 'Schluuuuuumpf')
-                    ->withHeader('x-FCK-Putin', '#StandWithUkraine')
+                    ->withHeader('X-FCK-Putin', '#StandWithUkraine')
                     ->withStatus($payload->getStatusCode());
 
     }
