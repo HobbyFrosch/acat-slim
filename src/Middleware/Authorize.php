@@ -69,14 +69,17 @@ final class Authorize implements MiddlewareInterface {
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler) : ResponseInterface {
 
-        try {
-            $this->validateRequest($request);
-        }
-        catch (AuthorizeException | TokenException $e) {
+	    if ($request->getMethod() !== 'OPTIONS') {
+		    try {
+			    $this->validateRequest($request);
+		    }
+		    catch (AuthorizeException | TokenException $e) {
 
-            $this->logger->critical($e->getMessage());
-            return (new ResponseFactory())->createResponse(401);
-        }
+			    $this->logger->critical($e->getMessage());
+
+			    return (new ResponseFactory())->createResponse(401);
+		    }
+	    }
 
         return $handler->handle($request);
 
