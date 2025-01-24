@@ -41,6 +41,7 @@ final class CORS implements MiddlewareInterface {
 	 * @param   bool             $strict
 	 */
 	public function __construct(LoggerInterface $logger, array $allowedOrigins, ResponseFactory $responseFactory, bool $strict = true) {
+		$this->strict = $strict;
 		$this->logger = $logger;
 		$this->allowedOrigins = $allowedOrigins;
 		$this->responseFactory = $responseFactory;
