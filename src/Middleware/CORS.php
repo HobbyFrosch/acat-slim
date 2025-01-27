@@ -20,6 +20,26 @@ final class CORS implements MiddlewareInterface {
 	private bool $strict;
 
 	/**
+	 * @var string[]
+	 */
+	private array $allowedHeaders = [
+		'Content-Type',
+		'Authorization'
+	];
+
+	/**
+	 * @var string[]
+	 */
+	private array $allowedMethods = [
+		'GET',
+		'POST',
+		'OPTIONS',
+		'PUT',
+		'DELETE',
+		'PATCH'
+	];
+
+	/**
 	 * @var array
 	 */
 	private array $allowedOrigins;
@@ -36,15 +56,27 @@ final class CORS implements MiddlewareInterface {
 
 	/**
 	 * @param   LoggerInterface  $logger
-	 * @param   array            $allowedOrigins
 	 * @param   ResponseFactory  $responseFactory
+	 * @param   array            $allowedOrigins
+	 * @param   array            $allowedHeaders
+	 * @param   array            $allowedMethods
 	 * @param   bool             $strict
 	 */
-	public function __construct(LoggerInterface $logger, array $allowedOrigins, ResponseFactory $responseFactory, bool $strict = true) {
+	public function __construct(LoggerInterface $logger, ResponseFactory $responseFactory, array $allowedOrigins, array $allowedHeaders = [], array $allowedMethods = [], bool $strict = true) {
+
 		$this->strict = $strict;
 		$this->logger = $logger;
 		$this->allowedOrigins = $allowedOrigins;
 		$this->responseFactory = $responseFactory;
+
+		if ($allowedMethods) {
+			$this->allowedMethods = $allowedMethods;
+		}
+
+		if ($allowedHeaders) {
+			$this->allowedHeaders = $allowedHeaders;
+		}
+
 	}
 
 	/**
@@ -90,8 +122,8 @@ final class CORS implements MiddlewareInterface {
 
 		return $response
 			->withHeader('Access-Control-Allow-Origin', $origin)
-			->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE, PATCH')
-			->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+			->withHeader('Access-Control-Allow-Methods', implode(', ', $this->allowedMethods))
+			->withHeader('Access-Control-Allow-Headers', implode(', ', $this->allowedHeaders));
     }
 
 }
