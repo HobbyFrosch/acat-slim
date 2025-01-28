@@ -14,15 +14,15 @@ use Psr\Http\Message\ResponseInterface as Response;
 abstract class AbstractAction extends Action {
 
 	/**
-	 * @var ServiceInterface|null
+	 * @var ServiceInterface
 	 */
-	protected ?ServiceInterface $serviceInterface;
+	protected ServiceInterface $serviceInterface;
 
 	/**
-	 * @param   LoggerInterface        $logger
-	 * @param   ServiceInterface|null  $serviceInterface
+	 * @param   LoggerInterface   $logger
+	 * @param   ServiceInterface  $serviceInterface
 	 */
-	public function __construct(LoggerInterface $logger, ?ServiceInterface $serviceInterface = null) {
+	public function __construct(LoggerInterface $logger, ServiceInterface $serviceInterface) {
 		parent::__construct($logger);
 		$this->serviceInterface = $serviceInterface;
 	}
