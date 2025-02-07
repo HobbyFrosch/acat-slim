@@ -93,13 +93,13 @@ final class Authorize implements MiddlewareInterface {
     public function validateRequest(ServerRequestInterface $request) : void {
 
         if (!array_key_exists($this->header, $request->getHeaders()) || !$request->getHeader($this->header)) {
-            throw new AuthorizeException('authorization failed');
+            throw new AuthorizeException('authorization failed. header is missing');
         }
 
         $authorizationString = $request->getHeader($this->header)[0];
 
         if (!str_contains($authorizationString, $this->tokenName)) {
-            throw new AuthorizeException('invalid authorization header');
+            throw new AuthorizeException('invalid authorization header or token');
         }
 
         $jwt = trim(str_replace($this->tokenName,'', $authorizationString));
