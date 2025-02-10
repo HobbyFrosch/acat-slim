@@ -35,6 +35,11 @@ final class Authorize implements MiddlewareInterface {
     private AcatToken $token;
 
     /**
+     * @var string|null
+     */
+    private ?string $cookieName;
+
+    /**
      * @var string
      */
     private string $tokenName = "Bearer";
@@ -50,16 +55,18 @@ final class Authorize implements MiddlewareInterface {
     private LoggerInterface $logger;
 
     /**
-     * @param AcatToken $token
-     * @param string $scope
-     * @param array $acl
-     * @param LoggerInterface $logger
+     * @param   AcatToken        $token
+     * @param   string           $scope
+     * @param   array            $acl
+     * @param   LoggerInterface  $logger
+     * @param   string|null      $cookieName
      */
-    public function __construct(AcatToken $token, string $scope, array $acl, LoggerInterface $logger) {
+    public function __construct(AcatToken $token, string $scope, array $acl, LoggerInterface $logger, ?string $cookieName = null) {
         $this->acl = $acl;
         $this->scope = $scope;
         $this->token = $token;
         $this->logger = $logger;
+        $this->cookieName = $cookieName;
     }
 
     /**
@@ -92,17 +99,13 @@ final class Authorize implements MiddlewareInterface {
      */
     public function validateRequest(ServerRequestInterface $request) : void {
 
-        if (!array_key_exists($this->header, $request->getHeaders()) || !$request->getHeader($this->header)) {
-            throw new AuthorizeException('authorization failed. header is missing');
+        if ($this->cookieName) {
+            $jwt = $this->getTokenStringFromCookie($request);
+        }
+        else {
+            $jwt = $this->getTokenStringFromHeader($request);
         }
 
-        $authorizationString = $request->getHeader($this->header)[0];
-
-        if (!str_contains($authorizationString, $this->tokenName)) {
-            throw new AuthorizeException('invalid authorization header or token');
-        }
-
-        $jwt = trim(str_replace($this->tokenName,'', $authorizationString));
         $this->token->decode($jwt);
 
         if (!in_array($this->scope, $this->token->getScopes())) {
@@ -128,6 +131,44 @@ final class Authorize implements MiddlewareInterface {
         $GLOBALS['token'] = $this->token;
 
         $this->logger->info('granted access for ' . $this->token->getName());
+
+    }
+
+    /**
+     * @throws AuthorizeException
+     * @return string
+     *
+     * @param   ServerRequestInterface  $request
+     */
+    private function getTokenStringFromCookie(ServerRequestInterface $request) : string {
+
+        if(empty($request->getCookieParams()[$this->cookieName])) {
+            throw new AuthorizeException('Authorization cookie missing');
+        }
+
+        return $request->getCookieParams()[$this->cookieName];
+
+    }
+
+    /**
+     * @throws AuthorizeException
+     * @return string
+     *
+     * @param   ServerRequestInterface  $request
+     */
+    private function getTokenStringFromHeader(ServerRequestInterface $request) : string {
+
+        if (!array_key_exists($this->header, $request->getHeaders()) || !$request->getHeader($this->header)) {
+            throw new AuthorizeException('authorization failed. header is missing');
+        }
+
+        $authorizationString = $request->getHeader($this->header)[0];
+
+        if (!str_contains($authorizationString, $this->tokenName)) {
+            throw new AuthorizeException('invalid authorization header or token');
+        }
+
+        return trim(str_replace($this->tokenName,'', $authorizationString));
 
     }
 }
