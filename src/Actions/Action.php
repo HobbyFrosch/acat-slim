@@ -108,9 +108,10 @@ abstract class Action {
     }
 
     /**
-     * @param mixed
-     * @param int $statusCode
      * @return Response
+     *
+     * @param   int         $statusCode
+     * @param   mixed|null  $data
      */
     protected function respondWithData(mixed $data = null, int $statusCode = 200): Response {
         return $this->respond(new ActionPayload($statusCode, $data));

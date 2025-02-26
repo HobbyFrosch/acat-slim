@@ -11,6 +11,7 @@ use Psr\Http\Message\ResponseInterface as Response;
  */
 abstract class AbstractAction extends Action {
 
+
     /**
 	 * @return Response
 	 */

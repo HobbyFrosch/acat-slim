@@ -130,7 +130,7 @@ final class Authorize implements MiddlewareInterface {
         $this->token->validateToken($publicKey);
         $GLOBALS['token'] = $this->token;
 
-        $this->logger->info('granted access for ' . $this->token->getName());
+        $this->logger->debug('granted access for ' . $this->token->getName());
 
     }
 
