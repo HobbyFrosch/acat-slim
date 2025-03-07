@@ -121,7 +121,7 @@ final class Authorize implements MiddlewareInterface {
         }
 
         $publicKeyUrl = $this->acl[$this->token->getIssuer()];
-        $publicKey = file_get_contents('https://acat.akademie.uni-bremen.de/keys?url=' . urlencode($publicKeyUrl));
+        $publicKey = file_get_contents($publicKeyUrl);
 
         if (!$publicKeyUrl) {
             throw new AuthorizeException('invalid public key from ' . $publicKeyUrl);
