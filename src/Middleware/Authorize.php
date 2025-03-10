@@ -121,9 +121,14 @@ final class Authorize implements MiddlewareInterface {
         }
 
         $publicKeyUrl = $this->acl[$this->token->getIssuer()];
-        $publicKey = file_get_contents($publicKeyUrl);
 
         if (!$publicKeyUrl) {
+            throw new AuthorizeException("issuer rejected. No public key found");
+        }
+
+        $publicKey = file_get_contents($publicKeyUrl);
+
+        if (!$publicKey) {
             throw new AuthorizeException('invalid public key from ' . $publicKeyUrl);
         }
 
