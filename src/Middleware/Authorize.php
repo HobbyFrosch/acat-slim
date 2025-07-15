@@ -33,12 +33,12 @@ final class Authorize implements MiddlewareInterface
     /**
      * @var string
      */
-    private string $allowedIssuer;
+    private string $client;
 
     /**
      * @var string
      */
-    private string $resourceName;
+    private string $allowedIssuer;
 
     /**
      * @var string|null
@@ -70,16 +70,15 @@ final class Authorize implements MiddlewareInterface
      * @param   LoggerInterface  $logger
      * @param   string           $url
      * @param   string           $realm
-     * @param   string           $resourceName
+     * @param   string           $client
      * @param   string           $allowedIssuer
      * @param   string|null      $requiredRoles
      */
-    public function __construct(LoggerInterface $logger, string $url, string $realm, string $resourceName, string $allowedIssuer, ?string $requiredRoles = null)
-    {
+    public function __construct(LoggerInterface $logger, string $url, string $realm, string $client, string $allowedIssuer, ?string $requiredRoles = null) {
         $this->url = $url;
         $this->realm = $realm;
         $this->logger = $logger;
-        $this->resourceName = $resourceName;
+        $this->client = $client;
         $this->requiredRole = $requiredRoles;
         $this->allowedIssuer = $allowedIssuer;
 
@@ -124,8 +123,8 @@ final class Authorize implements MiddlewareInterface
 
         $token = $tokenDecoder->decodeToken($jwt);
 
-        if (!$tokenAuthorizer->authorize($token, $this->resourceName, $this->allowedIssuer, $this->requiredRole)) {
-            +throw new AuthorizeException("Authorization failed: role '{$this->requiredRole}' not granted for resource '{$this->resourceName}'");
+        if (!$tokenAuthorizer->authorize($token, $this->client, $this->allowedIssuer, $this->requiredRole)) {
+            +throw new AuthorizeException("Authorization failed: role '{$this->requiredRole}' not granted for resource '{$this->client}'");
         }
 
         $GLOBALS['token'] = $token;
