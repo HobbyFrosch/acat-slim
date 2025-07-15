@@ -3,51 +3,63 @@
 
 namespace ACAT\Slim\Middleware;
 
-use ACAT\JWT\AcatToken;
-use ACAT\JWT\Exception\TokenException;
-use ACAT\Slim\Exception\AuthorizeException;
-use Nowakowskir\JWT\Exceptions\IntegrityViolationException;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\MiddlewareInterface;
-use Psr\Http\Server\RequestHandlerInterface;
+use ACAT\JWT\TokenDecoder;
 use Psr\Log\LoggerInterface;
+use ACAT\JWT\TokenAuthorizer;
+use ACAT\JWT\Exception\TokenException;
 use Slim\Psr7\Factory\ResponseFactory;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use ACAT\Slim\Exception\AuthorizeException;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 /**
  *
  */
-final class Authorize implements MiddlewareInterface {
-
-    /**
-     * @var array
-     */
-    private array $acl;
+final class Authorize implements MiddlewareInterface
+{
 
     /**
      * @var string
      */
-    private string $scope;
+    private string $url;
 
     /**
-     * @var AcatToken
+     * @var string
      */
-    private AcatToken $token;
+    private string $realm;
+
+    /**
+     * @var string
+     */
+    private string $allowedIssuer;
+
+    /**
+     * @var string
+     */
+    private string $resourceName;
 
     /**
      * @var string|null
      */
-    private ?string $cookieName;
+    private ?string $requiredRole;
+
+    /**
+     *
+     */
+    private const HTTP_OPTIONS = 'OPTIONS';
 
     /**
      * @var string
      */
-    private string $tokenName = "Bearer";
+    private const string TOKEN_TYPE = "Bearer";
+
 
     /**
      * @var string
      */
-    private string $header = "Authorization";
+    private const string HEADER = "Authorization";
 
     /**
      * @var LoggerInterface
@@ -55,87 +67,69 @@ final class Authorize implements MiddlewareInterface {
     private LoggerInterface $logger;
 
     /**
-     * @param   AcatToken        $token
-     * @param   string           $scope
-     * @param   array            $acl
      * @param   LoggerInterface  $logger
-     * @param   string|null      $cookieName
+     * @param   string           $url
+     * @param   string           $realm
+     * @param   string           $resourceName
+     * @param   string           $allowedIssuer
+     * @param   string|null      $requiredRoles
      */
-    public function __construct(AcatToken $token, string $scope, array $acl, LoggerInterface $logger, ?string $cookieName = null) {
-        $this->acl = $acl;
-        $this->scope = $scope;
-        $this->token = $token;
+    public function __construct(LoggerInterface $logger, string $url, string $realm, string $resourceName, string $allowedIssuer, ?string $requiredRoles = null)
+    {
+        $this->url = $url;
+        $this->realm = $realm;
         $this->logger = $logger;
-        $this->cookieName = $cookieName;
+        $this->resourceName = $resourceName;
+        $this->requiredRole = $requiredRoles;
+        $this->allowedIssuer = $allowedIssuer;
+
     }
 
     /**
-     * @param ServerRequestInterface $request
-     * @param RequestHandlerInterface $handler
      * @return ResponseInterface
+     *
+     * @param   RequestHandlerInterface  $handler
+     * @param   ServerRequestInterface   $request
      */
-    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler) : ResponseInterface {
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler) : ResponseInterface
+    {
 
-	    if ($request->getMethod() !== 'OPTIONS') {
-		    try {
-			    $this->validateRequest($request);
-		    }
-		    catch (AuthorizeException | TokenException $e) {
+        if ($request->getMethod() !== self::HTTP_OPTIONS) {
+            try {
+                $this->validateRequest($request);
+            } catch (AuthorizeException | TokenException $e) {
+                $this->logger->critical($e->getMessage());
 
-			    $this->logger->critical($e->getMessage());
-
-			    return (new ResponseFactory())->createResponse(401);
-		    }
-	    }
+                return new ResponseFactory()->createResponse(401);
+            }
+        }
 
         return $handler->handle($request);
 
     }
 
     /**
-     * @param ServerRequestInterface $request
      * @throws AuthorizeException
      * @throws TokenException
+     *
+     * @param   ServerRequestInterface  $request
      */
-    public function validateRequest(ServerRequestInterface $request) : void {
+    public function validateRequest(ServerRequestInterface $request) : void
+    {
 
-        if ($this->cookieName) {
-            $jwt = $this->getTokenStringFromCookie($request);
-        }
-        else {
-            $jwt = $this->getTokenStringFromHeader($request);
-        }
+        $tokenAuthorizer = new TokenAuthorizer();
+        $tokenDecoder = new TokenDecoder($this->url, $this->realm);
 
-        $this->token->decode($jwt);
+        $jwt = $this->getTokenStringFromHeader($request);
 
-        if (!in_array($this->scope, $this->token->getScopes())) {
-            throw new AuthorizeException("scope doesn't match");
-        }
+        $token = $tokenDecoder->decodeToken($jwt);
 
-        if (!array_key_exists($this->token->getIssuer(), $this->acl)) {
-            throw new AuthorizeException("issuer rejected");
+        if (!$tokenAuthorizer->authorize($token, $this->resourceName, $this->allowedIssuer, $this->requiredRole)) {
+            +throw new AuthorizeException("Authorization failed: role '{$this->requiredRole}' not granted for resource '{$this->resourceName}'");
         }
 
-        if (empty($this->acl[$this->token->getIssuer()])) {
-            throw new AuthorizeException('invalid acl configuration ' . $this->token->getIssuer() . ' has no public key');
-        }
-
-        $publicKeyUrl = $this->acl[$this->token->getIssuer()];
-
-        if (!$publicKeyUrl) {
-            throw new AuthorizeException("issuer rejected. No public key found");
-        }
-
-        $publicKey = file_get_contents($publicKeyUrl);
-
-        if (!$publicKey) {
-            throw new AuthorizeException('invalid public key from ' . $publicKeyUrl);
-        }
-
-        $this->token->validateToken($publicKey);
-        $GLOBALS['token'] = $this->token;
-
-        $this->logger->debug('granted access for ' . $this->token->getName());
+        $GLOBALS['token'] = $token;
+        $this->logger->debug('granted access for '.$token->getName());
 
     }
 
@@ -145,35 +139,21 @@ final class Authorize implements MiddlewareInterface {
      *
      * @param   ServerRequestInterface  $request
      */
-    private function getTokenStringFromCookie(ServerRequestInterface $request) : string {
+    private function getTokenStringFromHeader(ServerRequestInterface $request) : string
+    {
 
-        if(empty($request->getCookieParams()[$this->cookieName])) {
-            throw new AuthorizeException('Authorization cookie missing');
-        }
-
-        return $request->getCookieParams()[$this->cookieName];
-
-    }
-
-    /**
-     * @throws AuthorizeException
-     * @return string
-     *
-     * @param   ServerRequestInterface  $request
-     */
-    private function getTokenStringFromHeader(ServerRequestInterface $request) : string {
-
-        if (!array_key_exists($this->header, $request->getHeaders()) || !$request->getHeader($this->header)) {
+        if (!array_key_exists(self::HEADER, $request->getHeaders()) || !$request->getHeader(self::HEADER)) {
             throw new AuthorizeException('authorization failed. header is missing');
         }
 
-        $authorizationString = $request->getHeader($this->header)[0];
+        $authorizationString = $request->getHeaderLine(self::HEADER);
 
-        if (!str_contains($authorizationString, $this->tokenName)) {
-            throw new AuthorizeException('invalid authorization header or token');
+        if (!str_starts_with($authorizationString, self::TOKEN_TYPE.' ')) {
+            throw new AuthorizeException('Invalid token type');
         }
 
-        return trim(str_replace($this->tokenName,'', $authorizationString));
+        return trim(str_replace(self::TOKEN_TYPE, '', $authorizationString));
 
     }
+
 }
