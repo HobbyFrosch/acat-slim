@@ -48,7 +48,7 @@ final class Authorize implements MiddlewareInterface
     /**
      *
      */
-    private const HTTP_OPTIONS = 'OPTIONS';
+    private const string HTTP_OPTIONS = 'OPTIONS';
 
     /**
      * @var string
