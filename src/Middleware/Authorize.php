@@ -124,10 +124,12 @@ final class Authorize implements MiddlewareInterface
         $token = $tokenDecoder->decodeToken($jwt);
 
         if (!$tokenAuthorizer->authorize($token, $this->client, $this->allowedIssuer, $this->requiredRole)) {
-            +throw new AuthorizeException("Authorization failed: role '{$this->requiredRole}' not granted for resource '{$this->client}'");
+            throw new AuthorizeException("Authorization failed: role '{$this->requiredRole}' not granted for resource '{$this->client}'");
         }
 
+        $GLOBALS['jwt'] = $jwt;
         $GLOBALS['token'] = $token;
+
         $this->logger->debug('granted access for '.$token->getName());
 
     }
