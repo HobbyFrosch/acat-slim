@@ -127,7 +127,6 @@ final class Authorize implements MiddlewareInterface
             throw new AuthorizeException("Authorization failed: role '{$this->requiredRole}' not granted for resource '{$this->client}'");
         }
 
-        $GLOBALS['jwt'] = $jwt;
         $GLOBALS['token'] = $token;
 
         $this->logger->debug('granted access for '.$token->getName());
