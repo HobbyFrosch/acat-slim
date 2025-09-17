@@ -5,6 +5,7 @@ namespace ACAT\Slim\Middleware;
 
 use ACAT\JWT\TokenDecoder;
 use Psr\Log\LoggerInterface;
+use ACAT\JWT\TokenInterface;
 use ACAT\JWT\TokenAuthorizer;
 use ACAT\JWT\Exception\TokenException;
 use Slim\Psr7\Factory\ResponseFactory;
@@ -95,10 +96,10 @@ final class Authorize implements MiddlewareInterface
 
         if ($request->getMethod() !== self::HTTP_OPTIONS) {
             try {
-                $this->validateRequest($request);
+                $token = $this->validateRequest($request);
+                $request = $request->withAttribute('token', $token);
             } catch (AuthorizeException | TokenException $e) {
                 $this->logger->critical($e->getMessage());
-
                 return new ResponseFactory()->createResponse(401);
             }
         }
@@ -110,10 +111,11 @@ final class Authorize implements MiddlewareInterface
     /**
      * @throws AuthorizeException
      * @throws TokenException
+     * @return TokenInterface
      *
      * @param   ServerRequestInterface  $request
      */
-    public function validateRequest(ServerRequestInterface $request) : void
+    public function validateRequest(ServerRequestInterface $request) : TokenInterface
     {
 
         $tokenAuthorizer = new TokenAuthorizer();
@@ -127,9 +129,9 @@ final class Authorize implements MiddlewareInterface
             throw new AuthorizeException("Authorization failed: role '{$this->requiredRole}' not granted for resource '{$this->client}'");
         }
 
-        $GLOBALS['token'] = $token;
-
         $this->logger->debug('granted access for '.$token->getName());
+
+        return $token;
 
     }
 
