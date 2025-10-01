@@ -44,7 +44,7 @@ final class Authorize implements MiddlewareInterface
     /**
      * @var string|null
      */
-    private ?string $requiredRole;
+    private ?string $requiredRoles;
 
     /**
      *
@@ -80,9 +80,8 @@ final class Authorize implements MiddlewareInterface
         $this->realm = $realm;
         $this->logger = $logger;
         $this->client = $client;
-        $this->requiredRole = $requiredRoles;
+        $this->requiredRoles = $requiredRoles;
         $this->allowedIssuer = $allowedIssuer;
-
     }
 
     /**
@@ -121,12 +120,16 @@ final class Authorize implements MiddlewareInterface
         $tokenAuthorizer = new TokenAuthorizer();
         $tokenDecoder = new TokenDecoder($this->url, $this->realm);
 
-        $jwt = $this->getTokenStringFromHeader($request);
+        $jwt = $this->getTokenString($request);
+
+        if (!$jwt) {
+            throw new AuthorizeException('authorization failed. header is missing');
+        }
 
         $token = $tokenDecoder->decodeToken($jwt);
 
-        if (!$tokenAuthorizer->authorize($token, $this->client, $this->allowedIssuer, $this->requiredRole)) {
-            throw new AuthorizeException("Authorization failed: role '{$this->requiredRole}' not granted for resource '{$this->client}'");
+        if (!$tokenAuthorizer->authorize($token, $this->client, $this->allowedIssuer, $this->requiredRoles)) {
+            throw new AuthorizeException("Authorization failed: role '$this->requiredRoles' not granted for resource '$this->client'");
         }
 
         $this->logger->debug('granted access for '.$token->getName());
@@ -136,25 +139,40 @@ final class Authorize implements MiddlewareInterface
     }
 
     /**
-     * @throws AuthorizeException
-     * @return string
+     * @return string|null
      *
      * @param   ServerRequestInterface  $request
      */
-    private function getTokenStringFromHeader(ServerRequestInterface $request) : string
-    {
+    private function getTokenString(ServerRequestInterface $request) : ?string {
+        return $this->getTokenStringFromHeader($request) ?? $this->getTokenStringFromCookie($request);
+    }
 
-        if (!array_key_exists(self::HEADER, $request->getHeaders()) || !$request->getHeader(self::HEADER)) {
-            throw new AuthorizeException('authorization failed. header is missing');
-        }
+    /**
+     * @return string|null
+     *
+     * @param   ServerRequestInterface  $request
+     */
+    private function getTokenStringFromCookie(ServerRequestInterface $request) : ?string {
+        $cookieParams = $request->getCookieParams();
+        return $cookieParams[self::HEADER] ?? null;
+    }
+
+    /**
+     * @return string|null
+     *
+     * @param   ServerRequestInterface  $request
+     */
+    private function getTokenStringFromHeader(ServerRequestInterface $request) : ?string
+    {
 
         $authorizationString = $request->getHeaderLine(self::HEADER);
 
         if (!str_starts_with($authorizationString, self::TOKEN_TYPE.' ')) {
-            throw new AuthorizeException('Invalid token type');
+            $this->logger->alert('invalid token type');
+            return null;
         }
 
-        return trim(str_replace(self::TOKEN_TYPE, '', $authorizationString));
+        return trim(substr($authorizationString, strlen(self::TOKEN_TYPE. ' ')));
 
     }
 
