@@ -168,7 +168,6 @@ final class Authorize implements MiddlewareInterface
         $authorizationString = $request->getHeaderLine(self::HEADER);
 
         if (!str_starts_with($authorizationString, self::TOKEN_TYPE.' ')) {
-            $this->logger->alert('invalid token type');
             return null;
         }
 
