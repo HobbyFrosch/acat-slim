@@ -7,6 +7,7 @@ use ACAT\JWT\TokenDecoder;
 use Psr\Log\LoggerInterface;
 use ACAT\JWT\TokenInterface;
 use ACAT\JWT\TokenAuthorizer;
+use Psr\Container\ContainerInterface;
 use ACAT\JWT\Exception\TokenException;
 use Slim\Psr7\Factory\ResponseFactory;
 use Psr\Http\Message\ResponseInterface;
@@ -68,18 +69,25 @@ final class Authorize implements MiddlewareInterface
     private LoggerInterface $logger;
 
     /**
-     * @param   LoggerInterface  $logger
-     * @param   string           $url
-     * @param   string           $realm
-     * @param   string           $client
-     * @param   string           $allowedIssuer
-     * @param   string|null      $requiredRoles
+     * @var TokenInjectorInterface|null
      */
-    public function __construct(LoggerInterface $logger, string $url, string $realm, string $client, string $allowedIssuer, ?string $requiredRoles = null) {
+    private ?TokenInjectorInterface $tokenInjector;
+
+    /**
+     * @param   LoggerInterface              $logger
+     * @param   string                       $url
+     * @param   string                       $realm
+     * @param   string                       $client
+     * @param   string                       $allowedIssuer
+     * @param   string|null                  $requiredRoles
+     * @param   TokenInjectorInterface|null  $tokenInjector
+     */
+    public function __construct(LoggerInterface $logger, string $url, string $realm, string $client, string $allowedIssuer, ?string $requiredRoles = null, ?TokenInjectorInterface $tokenInjector = null) {
         $this->url = $url;
         $this->realm = $realm;
         $this->logger = $logger;
         $this->client = $client;
+        $this->tokenInjector = $tokenInjector;
         $this->requiredRoles = $requiredRoles;
         $this->allowedIssuer = $allowedIssuer;
     }
@@ -96,7 +104,12 @@ final class Authorize implements MiddlewareInterface
         if ($request->getMethod() !== self::HTTP_OPTIONS) {
             try {
                 $token = $this->validateRequest($request);
-                $request = $request->withAttribute('token', $token);
+                if ($this->tokenInjector) {
+                    $this->tokenInjector->injectToken($token);
+                }
+                else {
+                    $request = $request->withAttribute('token', $token);
+                }
             } catch (AuthorizeException | TokenException $e) {
                 $this->logger->critical($e->getMessage());
                 return new ResponseFactory()->createResponse(401);
